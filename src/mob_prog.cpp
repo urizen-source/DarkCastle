@@ -1150,7 +1150,8 @@ enum mprog_ifs
   eHASDONEQUEST1,
   eINSAMEZONE,
   eCLAN,
-  eISDAYTIME
+  eISDAYTIME,
+  eNUMOFOBJSINWORLD
 };
 
 
@@ -1163,6 +1164,7 @@ std::map<std::string,mprog_ifs> load_ifchecks()
   ifcheck_tmp["amtitems"] = eAMTITEMS;
   ifcheck_tmp["numpcs"] = eNUMPCS;
   ifcheck_tmp["numofmobsinworld"] = eNUMOFMOBSINWORLD;
+  ifcheck_tmp["numofobjsinworld"] = eNUMOFOBJSINWORLD;
 
   ifcheck_tmp["numofmobsinroom"] = eNUMOFMOBSINROOM;
   ifcheck_tmp["ispc"] = eISPC;
@@ -1464,6 +1466,23 @@ int mprog_do_ifchck( char *ifchck, CHAR_DATA *mob, CHAR_DATA *actor,
     		return false;
     	}
     });
+
+    return mprog_veval( count, opr, atoi(val) );
+   }
+   break;
+   case eNUMOFOBJSINWORLD:  
+   {
+    int target = atoi(arg);
+    int count = 0;
+
+    OBJ_DATA *p;
+    for (p = object_list; p; p = p->next)
+    {
+	if (obj_index[p->item_number].virt == target)
+	{
+		count++;
+	}
+    }
 
     return mprog_veval( count, opr, atoi(val) );
    }

@@ -43,6 +43,9 @@ extern struct descriptor_data *descriptor_list;
 extern CHAR_DATA *initiate_oproc(CHAR_DATA *ch, OBJ_DATA *obj);
 extern void end_oproc(CHAR_DATA *ch);
 
+extern void reset_zone(int zone);
+ extern struct obj_data * search_char_for_item(char_data * ch, int16 item_number, bool wearonly = FALSE);
+
 // TODO - go over emoting object stuff and make sure it's as effecient as we can get it
  
 struct obj_emote_data {
@@ -817,7 +820,6 @@ int gem_assembler(CHAR_DATA *ch, struct obj_data *obj, int cmd, char *arg,
       send_to_char("Assembled item not found.\r\n",ch);
       return eSUCCESS;
    }
-  struct obj_data * search_char_for_item(char_data * ch, int16 item_number, bool wearonly = FALSE);
 
   if(IS_SET(((OBJ_DATA*)obj_index[real_object(gem_data[position].pieces[MAX_GEM_ASSEMBLER_ITEM-1])].item)->obj_flags.more_flags, ITEM_UNIQUE)) {
       if(search_char_for_item(ch, real_object(gem_data[position].pieces[MAX_GEM_ASSEMBLER_ITEM-1]))) {
@@ -1890,6 +1892,82 @@ char*arg, CHAR_DATA *invoker)
       return eSUCCESS;
    }
    return eFAILURE;
+}
+
+int szrildor_pass(struct char_data *ch, struct obj_data *obj, int cmd, char *arg, CHAR_DATA *invoker)
+{
+	struct obj_data *p;
+	// 30097
+	if (cmd) return eFAILURE;
+
+	if (obj->obj_flags.timer == 1800)
+	{	// Just created - check if this is the first pass in existence and if so, repop zone 161
+		bool first = TRUE;
+		for (p = object_list; p;p = p->next)
+		{
+			if (obj_index[p->item_number].virt == 30097 && p != obj && p->obj_flags.timer != 1800)  // if any exist that are not at 1800 timer
+			{
+				first = FALSE;
+				break;
+			}
+		}
+		if (first && real_room(30000) != -1)
+		{
+			reset_zone(world[real_room(30000)].zone);
+		}
+
+	}
+	if (obj->obj_flags.timer == 1790 && obj->carried_by)
+	{	
+		send_to_char("40 seconds have passed!\r\n", obj->carried_by);
+	}
+
+	obj->obj_flags.timer--;
+	struct obj_data *n;
+	if (obj->obj_flags.timer<=0)
+	{
+		// once one expires, ALL expire.
+		for (p = object_list; p;p = n)
+		{
+			n = p->next;
+			if (obj_index[p->item_number].virt == 30097 ) 
+			{
+				if (p->carried_by)
+				{
+					send_to_char("The Szrildor daypass crumbles into dust.\r\n", p->carried_by);
+				}
+				extract_obj(p); // extract handles all variations of obj_from_char etc
+
+			}
+		}
+
+	}
+	return eSUCCESS;
+}
+
+int szrildor_pass_checks(struct char_data *ch, struct obj_data *obj, int cmd, char *arg, CHAR_DATA *invoker)
+{
+	// 30096
+	if (cmd) return eFAILURE;
+
+	int count = 0;
+        auto &character_list = DC::instance().character_list;
+        for (auto& i : character_list) {
+		if (IS_NPC(i)) continue;
+		if (!i->in_room) continue;
+		if (world[i->in_room].zone != 161) continue;
+		if (GET_LEVEL(i) >= 100) continue;
+		if (i->in_room == real_room(30000)) continue;
+
+		if (!search_char_for_item(i, real_object(30097)) || (++count) > 4)
+		{
+			act("Jeff arrives and forcibly extracts $n.\r\n", i, 0,0, TO_ROOM, 0);
+			act("Jeff arrives and forcibly extracts you.\r\n", i, 0,0, TO_CHAR, 0);
+			move_char(i, real_room(30000));
+		}
+
+	}
+	return eSUCCESS;
 }
 
 
